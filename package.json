@@ -1,0 +1,25 @@
+{
+  "name": "figma-local-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "mcp.js",
+  "scripts": {
+    "bridge": "node bridge-server.js",
+    "mcp": "node mcp.js",
+    "build-plugin": "cd figma-plugin && tsc"
+  },
+  "keywords": ["mcp", "figma", "plugin"],
+  "author": "",
+  "license": "ISC",
+  "description": "Local Figma MCP server with no API key or rate limits",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.16",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.104.0",
+    "typescript": "^5.7.3"
+  }
+}

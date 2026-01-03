@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+      margin: 0;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .connected {
+      background: #0d9488;
+      color: white;
+    }
+    .disconnected {
+      background: #dc2626;
+      color: white;
+    }
+    .info {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="status" class="status disconnected">
+    Disconnected from bridge
+  </div>
+
+  <div class="info">
+    <strong>Figma MCP Bridge</strong><br>
+    This plugin connects Figma to your local MCP server.
+    <br><br>
+    Make sure the bridge server is running on localhost:3000
+  </div>
+
+  <script>
+    let ws = null;
+    const statusEl = document.getElementById('status');
+
+    window.onmessage = async (event) => {
+      const msg = event.data.pluginMessage;
+
+      if (msg.type === 'connect') {
+        connectWebSocket(msg.url);
+      }
+
+      if (msg.type === 'ws-send') {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(msg.data));
+        }
+      }
+
+      if (msg.type === 'ws-response') {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'response',
+            requestId: msg.requestId,
+            result: msg.result,
+            error: msg.error
+          }));
+        }
+      }
+    };
+
+    function connectWebSocket(url) {
+      if (ws) {
+        ws.close();
+      }
+
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        statusEl.textContent = 'Connected to bridge';
+        statusEl.className = 'status connected';
+        parent.postMessage({ pluginMessage: { type: 'ws-connected' } }, '*');
+      };
+
+      ws.onclose = () => {
+        statusEl.textContent = 'Disconnected from bridge';
+        statusEl.className = 'status disconnected';
+
+        setTimeout(() => connectWebSocket(url), 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'request') {
+          parent.postMessage({
+            pluginMessage: {
+              type: 'ws-request',
+              data: {
+                requestId: data.requestId,
+                action: data.action,
+                params: data.params
+              }
+            }
+          }, '*');
+        }
+      };
+    }
+  </script>
+</body>
+</html>
