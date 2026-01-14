@@ -213,5 +213,187 @@ server.registerTool(
   }
 );
 
+// === WRITE OPERATIONS ===
+
+server.registerTool(
+  "create-component",
+  {
+    title: "Create Component",
+    description: "Converts a node into a reusable Figma component. The original node is replaced with the new component.",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to convert to a component")
+    },
+  },
+  async ({ nodeId }) => {
+    const normalizedNodeId = normalizeNodeId(nodeId);
+    const result = await requestFigma('create-component', { nodeId: normalizedNodeId });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "create-component-set",
+  {
+    title: "Create Component Set (Variants)",
+    description: "Combines multiple components into a component set with variants.",
+    inputSchema: {
+      nodeIds: z.array(z.string()).describe("Array of component node IDs to combine"),
+      name: z.string().describe("Name for the component set")
+    },
+  },
+  async ({ nodeIds, name }) => {
+    const normalizedNodeIds = nodeIds.map(normalizeNodeId);
+    const result = await requestFigma('create-component-set', { nodeIds: normalizedNodeIds, name });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "rename-node",
+  {
+    title: "Rename Node",
+    description: "Renames a node in the Figma document.",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to rename"),
+      newName: z.string().describe("The new name for the node")
+    },
+  },
+  async ({ nodeId, newName }) => {
+    const normalizedNodeId = normalizeNodeId(nodeId);
+    const result = await requestFigma('rename-node', { nodeId: normalizedNodeId, newName });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "move-node",
+  {
+    title: "Move Node",
+    description: "Moves a node to a different parent (frame, page, or group).",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to move"),
+      targetParentId: z.string().describe("The ID of the target parent node"),
+      index: z.number().optional().describe("Optional index position within the parent")
+    },
+  },
+  async ({ nodeId, targetParentId, index }) => {
+    const result = await requestFigma('move-node', {
+      nodeId: normalizeNodeId(nodeId),
+      targetParentId: normalizeNodeId(targetParentId),
+      index
+    });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "duplicate-node",
+  {
+    title: "Duplicate Node",
+    description: "Creates a copy of a node.",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to duplicate")
+    },
+  },
+  async ({ nodeId }) => {
+    const normalizedNodeId = normalizeNodeId(nodeId);
+    const result = await requestFigma('duplicate-node', { nodeId: normalizedNodeId });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "delete-node",
+  {
+    title: "Delete Node",
+    description: "Deletes a node from the Figma document. This action cannot be undone via the API.",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to delete")
+    },
+  },
+  async ({ nodeId }) => {
+    const normalizedNodeId = normalizeNodeId(nodeId);
+    const result = await requestFigma('delete-node', { nodeId: normalizedNodeId });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "create-frame",
+  {
+    title: "Create Frame",
+    description: "Creates a new frame in the Figma document.",
+    inputSchema: {
+      name: z.string().describe("Name for the new frame"),
+      x: z.number().optional().describe("X position (default: 0)"),
+      y: z.number().optional().describe("Y position (default: 0)"),
+      width: z.number().optional().describe("Width (default: 100)"),
+      height: z.number().optional().describe("Height (default: 100)"),
+      parentId: z.string().optional().describe("Optional parent node ID")
+    },
+  },
+  async ({ name, x, y, width, height, parentId }) => {
+    const result = await requestFigma('create-frame', {
+      name, x, y, width, height,
+      parentId: parentId ? normalizeNodeId(parentId) : undefined
+    });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "set-node-property",
+  {
+    title: "Set Node Property",
+    description: "Sets a property on a node (x, y, width, height, visible, locked, opacity, cornerRadius, fills, strokes).",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to modify"),
+      property: z.string().describe("The property name to set"),
+      value: z.any().describe("The new value for the property")
+    },
+  },
+  async ({ nodeId, property, value }) => {
+    const normalizedNodeId = normalizeNodeId(nodeId);
+    const result = await requestFigma('set-node-property', { nodeId: normalizedNodeId, property, value });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "group-nodes",
+  {
+    title: "Group Nodes",
+    description: "Groups multiple nodes together.",
+    inputSchema: {
+      nodeIds: z.array(z.string()).describe("Array of node IDs to group"),
+      name: z.string().optional().describe("Optional name for the group")
+    },
+  },
+  async ({ nodeIds, name }) => {
+    const normalizedNodeIds = nodeIds.map(normalizeNodeId);
+    const result = await requestFigma('group-nodes', { nodeIds: normalizedNodeIds, name });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  "clone-to-page",
+  {
+    title: "Clone Node to Page",
+    description: "Clones a node to a different page in the document.",
+    inputSchema: {
+      nodeId: z.string().describe("The ID of the node to clone"),
+      pageId: z.string().describe("The ID of the target page")
+    },
+  },
+  async ({ nodeId, pageId }) => {
+    const result = await requestFigma('clone-to-page', {
+      nodeId: normalizeNodeId(nodeId),
+      pageId: normalizeNodeId(pageId)
+    });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
